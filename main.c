@@ -7,7 +7,7 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_primitives.h>
 
-#include "help.h"
+#include "fps.h"
 
 #define TAMANHO_TELA_X 640
 #define TAMANHO_TELA_Y 480
@@ -86,7 +86,7 @@ int main(void) {
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
-        showFps(tempo, lastTempo);
+        showFps(font, tempo, lastTempo, 1);
 
         // atualiza tela
         al_flip_display();

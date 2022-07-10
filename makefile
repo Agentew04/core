@@ -1,13 +1,21 @@
-all: exe
+modules = fps
+objs = $(addsuffix .o, $(modules))
+libs = -lallegro -lallegro_font -lallegro_primitives -lm
+err = -Wall -Werror -Wpedantic -Wextra
+opt = -O3
 
-run: exe
-	./main.out
-exe: main
-	gcc main.o help.o -o main.out -lallegro -lallegro_font -lallegro_primitives -lm
-main: main.c help
-	gcc -c main.c -o main.o
-help: help.c
-	gcc -c help.c -o help.o
+all: main
+	./main
+main: main.o $(modules)
+	gcc $< -o $@ $(objs) $(err) $(opt) $(libs)
 
+main.o: main.c 
+	gcc -c $^ -o $@ $(err) $(opt)
+
+$(modules): %: %.c
+	gcc -c $^ -o $@.o $(err) $(opt)
+
+.PHONY: clean
 clean:
-	rm *.o *.out *.exe -rf
+	rm *.o *.out main -rf
+
