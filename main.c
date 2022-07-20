@@ -2,22 +2,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_primitives.h>
 
-#include "fps.h"
 
-#define TAMANHO_TELA_X 640
-#define TAMANHO_TELA_Y 480
-#define pi 3.1415
+// TODO REMOVE
+#include "a.h"
 
-
-void rotate(float angle, float *x, float *y, float innerAngle, float size, float offsetX, float offsetY) {
-    *x = cos((innerAngle + angle) * pi/180) * size/2 + offsetX;
-    *y = sin((innerAngle + angle) * pi/180) * size/2 + offsetY;
-}
+// defines
+#define SCR_W 1280
+#define SCR_H 720
+#define PI 3.14
 
 
 int main(void) {
@@ -32,11 +28,13 @@ int main(void) {
     al_init_primitives_addon();
     al_install_mouse();
     al_install_keyboard();
+    Timer *timer = initTimer();
+    startTimer(timer);
 
     font = al_create_builtin_font();
     fila_eventos = al_create_event_queue();
 
-    janela = al_create_display(TAMANHO_TELA_X, TAMANHO_TELA_Y);
+    janela = al_create_display(SCR_W, SCR_H);
 
     al_register_event_source(fila_eventos, al_get_display_event_source(janela));
 
@@ -45,6 +43,7 @@ int main(void) {
     al_register_event_source(fila_eventos, al_get_keyboard_event_source()); // registrando teclado
     int rodando = 1;
     double lastTempo, tempo = al_get_time();
+    float mouseX=0, mouseY=0;
     while (rodando) {
         
         lastTempo = tempo;
@@ -60,6 +59,8 @@ int main(void) {
             }
 
             if (evento.type == ALLEGRO_EVENT_MOUSE_AXES) {
+                mouseX = evento.mouse.x;
+                mouseY = evento.mouse.y;
             }
 
             if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
@@ -87,6 +88,11 @@ int main(void) {
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
         showFps(font, tempo, lastTempo, 1);
+        showTimer(font, janela, timer, 1);
+        Point mouse = {mouseX, mouseY};
+        showShield(mouse);
+
+
 
         // atualiza tela
         al_flip_display();
@@ -100,3 +106,95 @@ int main(void) {
 
     return 0;
 }
+
+void handleEvents(){
+    
+}
+
+// fps
+void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show){
+    if(!show)
+        return;
+
+    double fps  = 1/(tempo-lastTempo);
+    al_draw_textf(font, 
+        al_map_rgb(255,255,255),
+        0,0,
+        ALLEGRO_ALIGN_LEFT,
+        "FPS: %.1f", fps);
+}
+// end fps
+
+// timer
+Timer* initTimer(){
+    ALLEGRO_TIMER *alTimer = al_create_timer(1);
+    Timer *myTimer = malloc(sizeof(Timer));
+    myTimer->isPaused=1;
+    myTimer->timer=alTimer;
+    return myTimer;
+}
+
+void startTimer(Timer *timer){
+    if(timer->isPaused){
+        al_start_timer(timer->timer);
+        timer->isPaused=0;
+    }
+}
+
+void pauseTimer(Timer *timer){
+    if(!timer->isPaused){
+        al_stop_timer(timer->timer);
+        timer->isPaused=1;
+    }
+}
+
+void resetTimer(Timer *timer){
+    al_destroy_timer(timer->timer);
+    timer->isPaused=1;
+    timer->timer = al_create_timer(1);
+}
+
+int getMinutes(Timer *timer){
+    return al_get_timer_count(timer->timer)/60;
+}
+
+int getSeconds(Timer *timer){
+    return al_get_timer_count(timer->timer)%60;
+}
+
+void showTimer(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Timer *timer, int show){
+    if(!show)
+        return;
+    ALLEGRO_COLOR white = al_map_rgb(255,255,255);
+    al_draw_textf(font, 
+        white, 
+        al_get_display_width(janela),
+        0,
+        ALLEGRO_ALIGN_RIGHT,
+        "%02d:%02d", getMinutes(timer), getSeconds(timer));
+}
+
+void freeTimer(Timer *timer){
+    al_destroy_timer(timer->timer);
+    free(timer);
+}
+// end timer
+
+// mouse
+float getMouseAngle(Point src, Point mouse){
+    double rad = atan2(src.y-mouse.y, mouse.x - src.x) /**180/PI*/;
+    printf("%lf\n", rad*180/PI);
+    return rad;
+}
+// end mouse
+
+// player
+void showShield(Point mouse){
+    ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
+    Point mid = { SCR_W/2, SCR_H/2 };
+    float alpha = getMouseAngle(mid, mouse);
+    float angIni = -PI/2-alpha;
+    float deltaAng = PI;
+    al_draw_arc(mid.x, mid.y, 75, angIni, deltaAng, white, 2);
+}
+// end player

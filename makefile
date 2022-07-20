@@ -1,19 +1,11 @@
-modules = fps
-objs = $(addsuffix .o, $(modules))
 libs = -lallegro -lallegro_font -lallegro_primitives -lm
-err = -Wall -Werror -Wpedantic -Wextra
+err = -Wall -Wpedantic -Wextra #-Werror
 opt = -O3
 
-all: main
+all:
+	gcc main.c -o main $(libs) $(err) $(opt) 
 	./main
-main: main.o $(modules)
-	gcc $< -o $@ $(objs) $(err) $(opt) $(libs)
 
-main.o: main.c 
-	gcc -c $^ -o $@ $(err) $(opt)
-
-$(modules): %: %.c
-	gcc -c $^ -o $@.o $(err) $(opt)
 
 .PHONY: clean
 clean:
