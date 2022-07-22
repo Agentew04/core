@@ -10,42 +10,39 @@
 // TODO REMOVE
 #include "a.h"
 
-// defines
-#define SCR_W 1280
-#define SCR_H 720
-#define PI 3.14
-
-
-int main(void) {
-    // Variável representando a janela principal
-    ALLEGRO_DISPLAY *janela = NULL;
-    ALLEGRO_FONT *font = NULL;
-    ALLEGRO_EVENT_QUEUE *fila_eventos = NULL;
-
-    // Inicializamos a biblioteca
-    al_init();
+void init(ALLEGRO_EVENT_QUEUE **fila_eventos, ALLEGRO_FONT **font, ALLEGRO_DISPLAY **janela){
+    srand(time(NULL));
+    al_init(); 
     al_init_font_addon();
     al_init_primitives_addon();
     al_install_mouse();
     al_install_keyboard();
-    Timer *timer = initTimer();
-    startTimer(timer);
+    *font = al_create_builtin_font();
+    *fila_eventos = al_create_event_queue();
+    *janela = al_create_display(SCR_W, SCR_H);
+    al_register_event_source(*fila_eventos, al_get_display_event_source(*janela));
+    al_register_event_source(*fila_eventos, al_get_mouse_event_source()); // registrando mouse
+    al_register_event_source(*fila_eventos, al_get_keyboard_event_source()); // registrando teclado
+}
 
-    font = al_create_builtin_font();
-    fila_eventos = al_create_event_queue();
 
-    janela = al_create_display(SCR_W, SCR_H);
+int main(void) {
+    // Variável representando a janela principal
+    ALLEGRO_DISPLAY *janela;
+    ALLEGRO_FONT *font;
+    ALLEGRO_EVENT_QUEUE *fila_eventos;
+    init(&fila_eventos, &font, &janela);
 
-    al_register_event_source(fila_eventos, al_get_display_event_source(janela));
-
-    al_register_event_source(fila_eventos, al_get_mouse_event_source()); // registrando mouse
-
-    al_register_event_source(fila_eventos, al_get_keyboard_event_source()); // registrando teclado
+    // 'global' vars
     int rodando = 1;
     double lastTempo, tempo = al_get_time();
-    float mouseX=0, mouseY=0;
+    Player *player = (Player*)malloc(sizeof(Player));
+    Point mouse = {0, 0};
+    const Point mid = {SCR_W/2, SCR_H/2};
+    Timer *timer = initTimer();
+    startTimer(timer);
+    Enemy *enemy = generateRandomEnemy();
     while (rodando) {
-        
         lastTempo = tempo;
         tempo = al_get_time();
 
@@ -57,18 +54,15 @@ int main(void) {
             if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
                 rodando = 0;
             }
-
             if (evento.type == ALLEGRO_EVENT_MOUSE_AXES) {
-                mouseX = evento.mouse.x;
-                mouseY = evento.mouse.y;
+                mouse.x = evento.mouse.x;
+                mouse.y = evento.mouse.y;
+                player->alpha = getAngleBetweenPoints(mid, mouse);
             }
-
             if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
                 
             }
-            if(evento.type==ALLEGRO_EVENT_MOUSE_BUTTON_UP){
-            }
-
+            if(evento.type==ALLEGRO_EVENT_MOUSE_BUTTON_UP){}
             if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
                 switch (evento.keyboard.keycode) {
                     case ALLEGRO_KEY_ESCAPE:
@@ -79,7 +73,9 @@ int main(void) {
 
             if (evento.type == ALLEGRO_EVENT_KEY_UP) {
                 switch (evento.keyboard.keycode) {
-
+                    case ALLEGRO_KEY_UP:
+                    player->volume+=25;
+                    break;
                 }
             }
 
@@ -89,9 +85,9 @@ int main(void) {
 
         showFps(font, tempo, lastTempo, 1);
         showTimer(font, janela, timer, 1);
-        Point mouse = {mouseX, mouseY};
-        showShield(mouse);
-
+        showPlayer(player);
+        showEnemy(enemy);
+        updateEnemies(enemy, 1);
 
 
         // atualiza tela
@@ -103,13 +99,11 @@ int main(void) {
     // Finaliza a janela
     al_destroy_display(janela);
     al_destroy_event_queue(fila_eventos);
+    freeTimer(timer);
 
     return 0;
 }
 
-void handleEvents(){
-    
-}
 
 // fps
 void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show){
@@ -181,20 +175,81 @@ void freeTimer(Timer *timer){
 // end timer
 
 // mouse
-float getMouseAngle(Point src, Point mouse){
-    double rad = atan2(src.y-mouse.y, mouse.x - src.x) /**180/PI*/;
+float getAngleBetweenPoints(Point p1, Point p2){
+    double rad = atan2(p1.y-p2.y, p2.x - p1.x) /**180/PI*/;
     printf("%lf\n", rad*180/PI);
     return rad;
 }
 // end mouse
 
-// player
-void showShield(Point mouse){
+// renders
+void showShield(Player *player){
     ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
-    Point mid = { SCR_W/2, SCR_H/2 };
-    float alpha = getMouseAngle(mid, mouse);
-    float angIni = -PI/2-alpha;
+    float angIni = -PI/2-player->alpha;
     float deltaAng = PI;
-    al_draw_arc(mid.x, mid.y, 75, angIni, deltaAng, white, 2);
+    al_draw_arc(SCR_W/2, SCR_H/2, SHIELD_RADIUS, angIni, deltaAng, white, 3);
+}
+
+void showPlayer(Player *player){
+    ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
+    float radius = getRadiusFromVolume(player->volume);
+    showShield(player);
+    al_draw_filled_circle(SCR_W/2, SCR_H/2, radius, green);
 }
 // end player
+
+// enemies
+void showEnemy(Enemy *enemy){
+    ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
+    float radius = getRadiusFromVolume(enemy->volume);
+    al_draw_filled_circle(enemy->pos.x, enemy->pos.y, radius, red);
+}
+int checkEnemyShieldCollision(Enemy* enemy, Point mouse){
+    Point mid = { SCR_W/2, SCR_H/2 };
+    if(checkCircleArcCollision(mid, mouse, enemy->pos, getRadiusFromVolume(enemy->volume))){
+        return 1;
+    }
+    return 0;
+}
+Enemy* generateRandomEnemy(){
+    Enemy* e = (Enemy*)malloc(sizeof(Enemy));
+    // get random point in border of screen
+    int border = rand()%5;
+    switch (border)
+    {
+    case 0: // top buffer
+        e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.y = rand()%((0)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        break;
+    case 1: // right buffer
+        e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(SCR_W))+(SCR_W);
+        e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        break;
+    case 2: // bottom buffer
+        e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(SCR_H))+(SCR_H);
+        break;
+    case 3: // left buffer
+        e->pos.x = rand()%((0)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        break;
+    default:
+        break;
+    }
+    // random speed
+    e->speed = rand()%(MAX_SPEED-MIN_SPEED)+MIN_SPEED;
+    // calculate alpha to center
+    Point mid = { SCR_W/2, SCR_H/2 };
+    e->alpha = getAngleBetweenPoints(e->pos, mid);
+    e->volume = rand()%(MAX_VOLUME-MIN_VOLUME)+MIN_VOLUME;
+    return e;
+}
+void updateEnemies(Enemy *enemies, int nEnemies){
+    for(int i=0; i<nEnemies; i++){
+        // get x component from alpha
+        enemies[i].pos.x += enemies[i].speed*cos(enemies[i].alpha);
+        // get y component from alpha
+        enemies[i].pos.y += enemies[i].speed*sin(enemies[i].alpha);
+    }
+}
+// end enemies
