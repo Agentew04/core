@@ -1,5 +1,5 @@
 libs = -lallegro -lallegro_font -lallegro_primitives -lm
-err = -Wall -Wpedantic -Wextra #-Werror
+err = -Wall -Wpedantic -Wextra -Werror
 opt = -O3
 
 all:

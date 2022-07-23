@@ -44,7 +44,7 @@ int main(void) {
     startTimer(timer);
 
     // alloc enemies
-    int enemyCount=2;
+    int enemyCount=12500;
     Enemy **enemies = (Enemy**)malloc(enemyCount*sizeof(Enemy*));
     for (int i = 0; i < enemyCount; i++)
         enemies[i] = generateRandomEnemy();
@@ -90,11 +90,11 @@ int main(void) {
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
-        showFps(font, tempo, lastTempo, 1);
-        showTimer(font, janela, timer, 1);
-        showPlayer(player);
         showEnemies(enemies, enemyCount);
         updateEnemies(enemies, enemyCount);
+        showPlayer(player);
+        showFps(font, tempo, lastTempo, 1);
+        showTimer(font, janela, timer, 1);
 
         // atualiza tela
         al_flip_display();
@@ -105,7 +105,9 @@ int main(void) {
     // Finaliza a janela
     al_destroy_display(janela);
     al_destroy_event_queue(fila_eventos);
+    al_destroy_font(font);
     freeTimer(timer);
+    freeEnemies(enemies, enemyCount);
 
     return 0;
 }
@@ -124,62 +126,6 @@ void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show){
         "FPS: %.1f", fps);
 }
 // end fps
-
-// timer
-Timer* initTimer(){
-    ALLEGRO_TIMER *alTimer = al_create_timer(1);
-    Timer *myTimer = malloc(sizeof(Timer));
-    myTimer->isPaused=1;
-    myTimer->timer=alTimer;
-    return myTimer;
-}
-
-void startTimer(Timer *timer){
-    if(timer->isPaused){
-        al_start_timer(timer->timer);
-        timer->isPaused=0;
-    }
-}
-
-void pauseTimer(Timer *timer){
-    if(!timer->isPaused){
-        al_stop_timer(timer->timer);
-        timer->isPaused=1;
-    }
-}
-
-void resetTimer(Timer *timer){
-    al_destroy_timer(timer->timer);
-    timer->isPaused=1;
-    timer->timer = al_create_timer(1);
-}
-
-int getMinutes(Timer *timer){
-    return al_get_timer_count(timer->timer)/60;
-}
-
-int getSeconds(Timer *timer){
-    return al_get_timer_count(timer->timer)%60;
-}
-
-void showTimer(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Timer *timer, int show){
-    if(!show)
-        return;
-    ALLEGRO_COLOR white = al_map_rgb(255,255,255);
-    al_draw_textf(font, 
-        white, 
-        al_get_display_width(janela),
-        0,
-        ALLEGRO_ALIGN_RIGHT,
-        "%02d:%02d", getMinutes(timer), getSeconds(timer));
-}
-
-void freeTimer(Timer *timer){
-    al_destroy_timer(timer->timer);
-    free(timer);
-}
-// end timer
-
 
 // renders
 void showShield(Player *player){
@@ -206,11 +152,12 @@ void showEnemies(Enemy **enemies, int count){
 
 int checkEnemyShieldCollision(Enemy* enemy, Point mouse){
     Point mid = { SCR_W/2, SCR_H/2 };
-    if(checkCircleArcCollision(mid, mouse, enemy->pos, getRadiusFromVolume(enemy->volume))){
+    if(checkCircleArcCollision(mid, mouse, enemy->pos, SHIELD_RADIUS, getRadiusFromVolume(enemy->volume))){
         return 1;
     }
     return 0;
 }
+
 Enemy* generateRandomEnemy(){
     Enemy* e = (Enemy*)malloc(sizeof(Enemy));
     // get random point in border of screen
@@ -218,28 +165,29 @@ Enemy* generateRandomEnemy(){
     switch (border)
     {
     case 0: // top buffer
-        e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(0))+(0);
         e->pos.y = rand()%((0)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
         break;
     case 1: // right buffer
         e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(SCR_W))+(SCR_W);
-        e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(0))+(0);
         break;
     case 2: // bottom buffer
-        e->pos.x = rand()%((SCR_W+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.x = rand()%((SCR_W)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
         e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(SCR_H))+(SCR_H);
         break;
     case 3: // left buffer
         e->pos.x = rand()%((0)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
-        e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
+        e->pos.y = rand()%((SCR_H)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
         break;
     }
     // random speed
     e->speed = rand()%(MAX_SPEED-MIN_SPEED)+MIN_SPEED;
     // calculate random center
-    int midX = rand()%((SCR_W+ERR_MARGIN)-(SCR_W/2-ERR_MARGIN))+(SCR_W/2-ERR_MARGIN);
+    int midX = rand()%((SCR_W/2+ERR_MARGIN)-(SCR_W/2-ERR_MARGIN))+(SCR_W/2-ERR_MARGIN);
     int midY = rand()%((SCR_H/2+ERR_MARGIN)-(SCR_H/2-ERR_MARGIN))+(SCR_H/2-ERR_MARGIN);
     Point mid = { midX, midY };
+    e->relMid = mid;
     // calculate alpha to center
     e->alpha = getAngleBetweenPoints(e->pos, mid);
     e->volume = rand()%(MAX_VOLUME-MIN_VOLUME)+MIN_VOLUME;
@@ -251,21 +199,36 @@ Enemy* generateRandomEnemy(){
     printf("=======\n");
     return e;
 }
+
 void updateEnemies(Enemy **enemies, int nEnemies){
     for(int i=0; i<nEnemies; i++){
-        int dx = enemies[i]->speed*cos(enemies[i]->alpha);
-        int dy = enemies[i]->speed*(-sin(enemies[i]->alpha));
-        enemies[i]->pos.x += dx;
-        enemies[i]->pos.y += dy;
+        Enemy *e = enemies[i];
+        float dx = e->speed*cos(e->alpha);
+        float dy = e->speed*(-sin(e->alpha));
+        e->pos.x += dx;
+        e->pos.y += dy;
 
-        // check if out of screen
-        if(enemies[i]->pos.x<(-BUFFER_SIZE)||
-            enemies[i]->pos.x>(SCR_W+BUFFER_SIZE)||
-            enemies[i]->pos.y<(-BUFFER_SIZE)||
-            enemies[i]->pos.y>(SCR_H+BUFFER_SIZE)){
+        // check if out of visible screen
+        int outOfScreen = e->pos.x<0||
+            e->pos.x>SCR_W||
+            e->pos.y<0||
+            e->pos.y>SCR_H;
+        // P+a.vec = M
+        // P -> pos // M -> relMid // a -> unknown realNumber // vec -> direction(dx,dy)
+        float a = (e->relMid.x - e->pos.x)/dx;
+        int alphaOutOfScreen = a<0;
+        if(outOfScreen && alphaOutOfScreen){
             free(enemies[i]);
             enemies[i] = generateRandomEnemy();
         }
     }
 }
+
+void freeEnemies(Enemy **enemies, int nEnemies){
+    for(int i=0; i<nEnemies; i++){
+        free(enemies[i]);
+    }
+    free(enemies);
+}
+
 // end enemies
