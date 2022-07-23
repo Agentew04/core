@@ -7,10 +7,11 @@
 #define SHIELD_RADIUS 75
 #define BULLET_SPEED 5
 #define BUFFER_SIZE 500
-#define MAX_SPEED 50
-#define MIN_SPEED 49
+#define MAX_SPEED 3
+#define MIN_SPEED 1
 #define MAX_VOLUME 200
-#define MIN_VOLUME 150
+#define MIN_VOLUME 100
+#define ERR_MARGIN 2
 
 typedef struct timer {
     int isPaused;
@@ -56,24 +57,28 @@ void showTimer(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Timer *timer, int sh
 void freeTimer(Timer *timer);
 void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show);
 float getAngleBetweenPoints(Point p1, Point p2);
-void startAllegro();
+void init();
 void showShield(Player *player);
 void showPlayer(Player *player);
-void showEnemy(Enemy *enemy);
+void showEnemies(Enemy **enemies, int count);
 float getRadiusFromVolume(float volume);
 int checkEnemyShieldCollision(Enemy* enemy, Point mouse);
 float getDistance(Point p1, Point p2);
 int checkCircleArcCollision(Point arcCenter, Point mouse, Point circleCenter, float circleRadius);
 int checkCircleCicleCollision(Point c1, float r1, Point c2, float r2);
 Enemy* generateRandomEnemy();
-void updateEnemies(Enemy *enemies, int nEnemies);
+void updateEnemies(Enemy **enemies, int nEnemies);
 
 // geometria
 float getRadiusFromVolume(float volume){
     // r = raiz(area/pi)
     return sqrt(volume/PI);
 }
-int checkCircleArcCollision(Point arcCenter, Point mouse, Point circleCenter, float circleRadius){
+float getAngleBetweenPoints(Point p1, Point p2){
+    double rad = atan2(p1.y-p2.y, p2.x - p1.x);
+    return rad;
+}
+int checkCircleArcCollision(Point arcCenter, Point mouse, Point circleCenter, float sciscircleRadius){
     float alphaArc = getAngleBetweenPoints(arcCenter, mouse);
     float alphaCircle = getAngleBetweenPoints(arcCenter, circleCenter);
     float distArcCircle = getDistance(arcCenter, circleCenter)-SHIELD_RADIUS;

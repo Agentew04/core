@@ -26,6 +26,7 @@ void init(ALLEGRO_EVENT_QUEUE **fila_eventos, ALLEGRO_FONT **font, ALLEGRO_DISPL
 }
 
 
+
 int main(void) {
     // Variável representando a janela principal
     ALLEGRO_DISPLAY *janela;
@@ -41,7 +42,13 @@ int main(void) {
     const Point mid = {SCR_W/2, SCR_H/2};
     Timer *timer = initTimer();
     startTimer(timer);
-    Enemy *enemy = generateRandomEnemy();
+
+    // alloc enemies
+    int enemyCount=2;
+    Enemy **enemies = (Enemy**)malloc(enemyCount*sizeof(Enemy*));
+    for (int i = 0; i < enemyCount; i++)
+        enemies[i] = generateRandomEnemy();
+    
     while (rodando) {
         lastTempo = tempo;
         tempo = al_get_time();
@@ -86,9 +93,8 @@ int main(void) {
         showFps(font, tempo, lastTempo, 1);
         showTimer(font, janela, timer, 1);
         showPlayer(player);
-        showEnemy(enemy);
-        updateEnemies(enemy, 1);
-
+        showEnemies(enemies, enemyCount);
+        updateEnemies(enemies, enemyCount);
 
         // atualiza tela
         al_flip_display();
@@ -174,13 +180,6 @@ void freeTimer(Timer *timer){
 }
 // end timer
 
-// mouse
-float getAngleBetweenPoints(Point p1, Point p2){
-    double rad = atan2(p1.y-p2.y, p2.x - p1.x) /**180/PI*/;
-    printf("%lf\n", rad*180/PI);
-    return rad;
-}
-// end mouse
 
 // renders
 void showShield(Player *player){
@@ -196,14 +195,15 @@ void showPlayer(Player *player){
     showShield(player);
     al_draw_filled_circle(SCR_W/2, SCR_H/2, radius, green);
 }
-// end player
-
-// enemies
-void showEnemy(Enemy *enemy){
+void showEnemies(Enemy **enemies, int count){
     ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
-    float radius = getRadiusFromVolume(enemy->volume);
-    al_draw_filled_circle(enemy->pos.x, enemy->pos.y, radius, red);
+    for(int i=0; i<count; i++){
+        float radius = getRadiusFromVolume(enemies[i]->volume);
+        al_draw_filled_circle(enemies[i]->pos.x, enemies[i]->pos.y, radius, red);
+    }
 }
+// end renders
+
 int checkEnemyShieldCollision(Enemy* enemy, Point mouse){
     Point mid = { SCR_W/2, SCR_H/2 };
     if(checkCircleArcCollision(mid, mouse, enemy->pos, getRadiusFromVolume(enemy->volume))){
@@ -233,23 +233,39 @@ Enemy* generateRandomEnemy(){
         e->pos.x = rand()%((0)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
         e->pos.y = rand()%((SCR_H+BUFFER_SIZE)-(-BUFFER_SIZE))+(-BUFFER_SIZE);
         break;
-    default:
-        break;
     }
     // random speed
     e->speed = rand()%(MAX_SPEED-MIN_SPEED)+MIN_SPEED;
+    // calculate random center
+    int midX = rand()%((SCR_W+ERR_MARGIN)-(SCR_W/2-ERR_MARGIN))+(SCR_W/2-ERR_MARGIN);
+    int midY = rand()%((SCR_H/2+ERR_MARGIN)-(SCR_H/2-ERR_MARGIN))+(SCR_H/2-ERR_MARGIN);
+    Point mid = { midX, midY };
     // calculate alpha to center
-    Point mid = { SCR_W/2, SCR_H/2 };
     e->alpha = getAngleBetweenPoints(e->pos, mid);
     e->volume = rand()%(MAX_VOLUME-MIN_VOLUME)+MIN_VOLUME;
+    printf("=======\n");
+    printf("inimigo gerado nas pos x: %f y: %f\n", e->pos.x, e->pos.y);
+    printf("enemy mid x: %f y: %f\n", mid.x, mid.y);
+    printf("enemy alpha: %f graus\n", e->alpha*(180/PI));
+    printf("enemy volume: %f\n", e->volume);
+    printf("=======\n");
     return e;
 }
-void updateEnemies(Enemy *enemies, int nEnemies){
+void updateEnemies(Enemy **enemies, int nEnemies){
     for(int i=0; i<nEnemies; i++){
-        // get x component from alpha
-        enemies[i].pos.x += enemies[i].speed*cos(enemies[i].alpha);
-        // get y component from alpha
-        enemies[i].pos.y += enemies[i].speed*sin(enemies[i].alpha);
+        int dx = enemies[i]->speed*cos(enemies[i]->alpha);
+        int dy = enemies[i]->speed*(-sin(enemies[i]->alpha));
+        enemies[i]->pos.x += dx;
+        enemies[i]->pos.y += dy;
+
+        // check if out of screen
+        if(enemies[i]->pos.x<(-BUFFER_SIZE)||
+            enemies[i]->pos.x>(SCR_W+BUFFER_SIZE)||
+            enemies[i]->pos.y<(-BUFFER_SIZE)||
+            enemies[i]->pos.y>(SCR_H+BUFFER_SIZE)){
+            free(enemies[i]);
+            enemies[i] = generateRandomEnemy();
+        }
     }
 }
 // end enemies
