@@ -5,13 +5,15 @@
 #define SCR_H 720
 #define PI 3.14
 #define SHIELD_RADIUS 75
+#define SHIELD_THICK 3
 #define BULLET_SPEED 5
+#define INIT_VOLUME 500
 #define BUFFER_SIZE 500
 #define MAX_SPEED 4
 #define MIN_SPEED 1
 #define MAX_VOLUME 200
 #define MIN_VOLUME 100
-#define ERR_MARGIN 50
+#define ERR_MARGIN 25
 
 typedef struct timer {
     int isPaused;
@@ -20,10 +22,22 @@ typedef struct timer {
 typedef struct point{
     float x, y;
 } Point;
+typedef struct arc{
+    Point center;
+    float radius;
+    float startAlpha;
+    float deltaAlpha;
+    float thickness;
+} Arc;
+typedef struct circle{
+    Point center;
+    float radius;
+} Circle;
+
 typedef struct player{
     float alpha;
     float volume;
-    int vidas;
+    int livesRemaining;
     int score;
     int rocketAvaiable;
     int shieldAvaiable;
@@ -46,6 +60,8 @@ typedef struct enemy{
     float alpha;
     float speed;
     float volume;
+    int isAlive;
+    int isAlly;
 } Enemy;
 
 Timer* initTimer();
@@ -63,18 +79,23 @@ void freeEnemies(Enemy **enemies, int count);
 void showTimer(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Timer *timer, int show);
 void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show);
 void showShield(Player *player);
-void showPlayer(Player *player);
+void showPlayer(Player *player, ALLEGRO_DISPLAY *janela);
 void showEnemies(Enemy **enemies, int count);
+void showRocketLauncher(Player *player, ALLEGRO_DISPLAY *janela);
+void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom);
 
 float getAngleBetweenPoints(Point p1, Point p2);
 float getRadiusFromVolume(float volume);
-int checkEnemyShieldCollision(Enemy* enemy, Point mouse);
+int checkEnemyShieldCollision(Enemy* enemy, Player *player);
+int checkEnemyPlayerCollision(Enemy* enemy, Player *player);
 float getDistance(Point p1, Point p2);
-int checkCircleArcCollision(Point arcCenter, Point mouse, Point circleCenter, float arcRadius, float circleRadius);
+int checkCircleArcCollision(Arc a, Circle c);
 int checkCircleCicleCollision(Point c1, float r1, Point c2, float r2);
 
 Enemy* generateRandomEnemy();
+Player* generatePlayer();
 void updateEnemies(Enemy **enemies, int nEnemies);
+void updatePlayer(Player *player, Enemy **enemies, int nEnemies);
 
 // geometria
 float getRadiusFromVolume(float volume){
@@ -85,12 +106,13 @@ float getAngleBetweenPoints(Point p1, Point p2){
     double rad = atan2(p1.y-p2.y, p2.x - p1.x);
     return rad;
 }
-int checkCircleArcCollision(Point arcCenter, Point mouse, Point circleCenter, float arcRadius, float circleRadius){
-    float alphaArc = getAngleBetweenPoints(arcCenter, mouse);
-    float alphaCircle = getAngleBetweenPoints(arcCenter, circleCenter);
-    float distArcCircle = getDistance(arcCenter, circleCenter)-arcRadius-circleRadius;
-    if(distArcCircle<0.1 && alphaCircle<alphaArc+PI/2 && alphaCircle>alphaArc-PI/2)
-        return 1;
+int checkCircleArcCollision(Arc a, Circle c){
+    float circleAlpha = getAngleBetweenPoints(a.center, c.center);
+    float distArcCircle = getDistance(a.center, c.center)-(c.radius+a.radius+a.thickness);
+    // check if circleAlpha is between startAlpha and startAlpha+deltaAlpha
+    if(circleAlpha >= a.startAlpha && circleAlpha <= a.startAlpha+a.deltaAlpha){
+        return distArcCircle <= 0;
+    }
     return 0;
 }
 int checkCircleCicleCollision(Point c1, float r1, Point c2, float r2){
@@ -102,6 +124,15 @@ int checkCircleCicleCollision(Point c1, float r1, Point c2, float r2){
 float getDistance(Point p1, Point p2){
     return sqrt(pow(p1.x-p2.x, 2)+pow(p1.y-p2.y, 2));
 }
+void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom) {
+    ALLEGRO_VERTEX v[] = {
+        {.x=x    , .y=y    , .z=0, .color=top},
+        {.x=x + w, .y=y    , .z=0, .color=top},
+        {.x=x    , .y=y + h, .z=0, .color=bottom},
+        {.x=x + w, .y=y + h, .z=0, .color=bottom}};
+    al_draw_prim(v, NULL, NULL, 0, 4, ALLEGRO_PRIM_TRIANGLE_STRIP);
+}
+
 
 // timer
 Timer* initTimer(){

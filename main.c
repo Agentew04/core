@@ -37,14 +37,14 @@ int main(void) {
     // 'global' vars
     int rodando = 1;
     double lastTempo, tempo = al_get_time();
-    Player *player = (Player*)malloc(sizeof(Player));
+    Player *player = generatePlayer();
     Point mouse = {0, 0};
     const Point mid = {SCR_W/2, SCR_H/2};
     Timer *timer = initTimer();
     startTimer(timer);
 
     // alloc enemies
-    int enemyCount=12500;
+    int enemyCount=10;
     Enemy **enemies = (Enemy**)malloc(enemyCount*sizeof(Enemy*));
     for (int i = 0; i < enemyCount; i++)
         enemies[i] = generateRandomEnemy();
@@ -77,7 +77,6 @@ int main(void) {
                     break;
                 }
             }
-
             if (evento.type == ALLEGRO_EVENT_KEY_UP) {
                 switch (evento.keyboard.keycode) {
                     case ALLEGRO_KEY_UP:
@@ -85,14 +84,17 @@ int main(void) {
                     break;
                 }
             }
-
         }
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
+        ALLEGRO_COLOR topFade = al_map_rgb(34, 77, 92);
+        ALLEGRO_COLOR bottomFade = al_map_rgb(3, 6, 7);
+        draw_vertical_gradient_rect(0,0, SCR_W, SCR_H, topFade, bottomFade);
         showEnemies(enemies, enemyCount);
         updateEnemies(enemies, enemyCount);
-        showPlayer(player);
+        updatePlayer(player, enemies, enemyCount);
+        showPlayer(player, janela);
         showFps(font, tempo, lastTempo, 1);
         showTimer(font, janela, timer, 1);
 
@@ -134,25 +136,66 @@ void showShield(Player *player){
     float deltaAng = PI;
     al_draw_arc(SCR_W/2, SCR_H/2, SHIELD_RADIUS, angIni, deltaAng, white, 3);
 }
-
-void showPlayer(Player *player){
+void showRocketLauncher(Player *player, ALLEGRO_DISPLAY* janela){
+    ALLEGRO_COLOR yellow = al_map_rgb(255, 255, 0);
+    int bmpSize = 32;
+    ALLEGRO_BITMAP *rocket = al_create_bitmap(bmpSize, bmpSize);
+    al_set_target_bitmap(rocket);
+    Point p1 = { 0, bmpSize/2 };
+    Point p2 = { bmpSize, 0 };
+    Point p3 = { bmpSize, bmpSize };
+    al_draw_filled_triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, yellow);
+    al_set_target_backbuffer(janela);
+    Point rotCenter = { SCR_W/2, SCR_H/2 };
+    al_draw_rotated_bitmap(rocket, 
+                            SHIELD_RADIUS, bmpSize/2,
+                            rotCenter.x, rotCenter.y, 
+                            -player->alpha, 0);
+    al_destroy_bitmap(rocket);
+}
+void showPlayer(Player *player, ALLEGRO_DISPLAY *janela){
+    if(player->volume<=0)
+        return;
     ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
     float radius = getRadiusFromVolume(player->volume);
     showShield(player);
+    showRocketLauncher(player, janela);
     al_draw_filled_circle(SCR_W/2, SCR_H/2, radius, green);
 }
 void showEnemies(Enemy **enemies, int count){
     ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
     for(int i=0; i<count; i++){
+        if(!enemies[i]->isAlive)
+            continue;
         float radius = getRadiusFromVolume(enemies[i]->volume);
         al_draw_filled_circle(enemies[i]->pos.x, enemies[i]->pos.y, radius, red);
     }
 }
+// void showProjectiles(Rocket *rocket, Bullet **bullets, int numBullets){
+    
+// }
 // end renders
 
-int checkEnemyShieldCollision(Enemy* enemy, Point mouse){
+int checkEnemyShieldCollision(Enemy* enemy, Player *player){
     Point mid = { SCR_W/2, SCR_H/2 };
-    if(checkCircleArcCollision(mid, mouse, enemy->pos, SHIELD_RADIUS, getRadiusFromVolume(enemy->volume))){
+    Arc a = {
+        .center = mid,
+        .radius = SHIELD_RADIUS,
+        .thickness = SHIELD_THICK,
+        .startAlpha = -PI/2+player->alpha,
+        .deltaAlpha = PI
+    };
+    Circle c = {
+        .center = enemy->pos,
+        .radius = getRadiusFromVolume(enemy->volume)
+    };
+    return checkCircleArcCollision(a, c);
+}
+int checkEnemyPlayerCollision(Enemy *enemy, Player *player){
+    float rPlayer = getRadiusFromVolume(player->volume);
+    float rEnemy = getRadiusFromVolume(enemy->volume);
+    Point mid = { SCR_W/2 , SCR_H/2 };
+    if(checkCircleCicleCollision(mid, rPlayer, enemy->pos, rEnemy)){
         return 1;
     }
     return 0;
@@ -191,6 +234,7 @@ Enemy* generateRandomEnemy(){
     // calculate alpha to center
     e->alpha = getAngleBetweenPoints(e->pos, mid);
     e->volume = rand()%(MAX_VOLUME-MIN_VOLUME)+MIN_VOLUME;
+    e->isAlive=1;
     printf("=======\n");
     printf("inimigo gerado nas pos x: %f y: %f\n", e->pos.x, e->pos.y);
     printf("enemy mid x: %f y: %f\n", mid.x, mid.y);
@@ -202,6 +246,8 @@ Enemy* generateRandomEnemy(){
 
 void updateEnemies(Enemy **enemies, int nEnemies){
     for(int i=0; i<nEnemies; i++){
+        if(!enemies[i]->isAlive)
+            continue;
         Enemy *e = enemies[i];
         float dx = e->speed*cos(e->alpha);
         float dy = e->speed*(-sin(e->alpha));
@@ -232,3 +278,47 @@ void freeEnemies(Enemy **enemies, int nEnemies){
 }
 
 // end enemies
+
+// player
+void updatePlayer(Player *player, Enemy **enemies, int nEnemies){
+    // check for collisions
+    if(player->volume<=0)
+        return;
+    for (int i = 0; i < nEnemies; i++)
+    {
+        if(enemies[i]->isAlive){
+
+            // killed by shield
+            if(checkEnemyShieldCollision(enemies[i], player)){
+                enemies[i]->isAlive = 0;
+                player->score++;
+                printf("player score: %d\n", player->score);
+                continue;
+            }
+
+            // enemy hit player
+            if(checkEnemyPlayerCollision(enemies[i], player)){
+                player->volume -= enemies[i]->volume;
+                enemies[i]->isAlive = 0;
+                printf("player volume: %f\n", player->volume);
+            }
+        }
+    }
+    
+}
+Player* generatePlayer(){
+    Player *p = (Player*)malloc(sizeof(Player));
+    if(p==NULL){
+        printf("erro ao alocar player\n");
+        return NULL;
+    }
+    p->alpha = 0;
+    p->canShootRocket = 1;
+    p->livesRemaining = 3;
+    p->rocketAvaiable = 0;
+    p->score = 0;
+    p->shieldAvaiable = 0;
+    p->volume = INIT_VOLUME;
+    return p;
+}
+// end player
