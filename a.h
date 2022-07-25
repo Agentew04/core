@@ -81,7 +81,7 @@ void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show);
 void showShield(Player *player);
 void showPlayer(Player *player, ALLEGRO_DISPLAY *janela);
 void showEnemies(Enemy **enemies, int count);
-void showRocketLauncher(Player *player, ALLEGRO_DISPLAY *janela);
+void showRocketLauncher(Player *plPayer, ALLEGRO_DISPLAY *janela);
 void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom);
 
 float getAngleBetweenPoints(Point p1, Point p2);

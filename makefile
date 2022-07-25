@@ -9,5 +9,5 @@ all:
 
 .PHONY: clean
 clean:
-	rm *.o *.out main -rf
+	rm *.o *.out *.exe main -rf
 

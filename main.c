@@ -238,7 +238,7 @@ Enemy* generateRandomEnemy(){
     printf("=======\n");
     printf("inimigo gerado nas pos x: %f y: %f\n", e->pos.x, e->pos.y);
     printf("enemy mid x: %f y: %f\n", mid.x, mid.y);
-    printf("enemy alpha: %f graus\n", e->alpha*(180/PI));
+    printf("enemy alpha: %f graus\n", e->alpha *(180/PI));
     printf("enemy volume: %f\n", e->volume);
     printf("=======\n");
     return e;
