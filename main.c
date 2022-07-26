@@ -9,6 +9,9 @@
 
 // TODO REMOVE
 #include "a.h"
+#include "timer.h"
+#include "geometry.h"
+#include "hud.h"
 
 void init(ALLEGRO_EVENT_QUEUE **fila_eventos, ALLEGRO_FONT **font, ALLEGRO_DISPLAY **janela){
     srand(time(NULL));
@@ -44,7 +47,7 @@ int main(void) {
     startTimer(timer);
 
     // alloc enemies
-    int enemyCount=10;
+    int enemyCount=50;
     Enemy **enemies = (Enemy**)malloc(enemyCount*sizeof(Enemy*));
     for (int i = 0; i < enemyCount; i++)
         enemies[i] = generateRandomEnemy();
@@ -95,8 +98,7 @@ int main(void) {
         updateEnemies(enemies, enemyCount);
         updatePlayer(player, enemies, enemyCount);
         showPlayer(player, janela);
-        showFps(font, tempo, lastTempo, 1);
-        showTimer(font, janela, timer, 1);
+        ShowHud(font, janela, player, timer, tempo, lastTempo);
 
         // atualiza tela
         al_flip_display();
@@ -114,26 +116,11 @@ int main(void) {
     return 0;
 }
 
-
-// fps
-void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo, int show){
-    if(!show)
-        return;
-
-    double fps  = 1/(tempo-lastTempo);
-    al_draw_textf(font, 
-        al_map_rgb(255,255,255),
-        0,0,
-        ALLEGRO_ALIGN_LEFT,
-        "FPS: %.1f", fps);
-}
-// end fps
-
 // renders
 void showShield(Player *player){
     ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
-    float angIni = -PI/2-player->alpha;
-    float deltaAng = PI;
+    float angIni = -M_PI/2-player->alpha;
+    float deltaAng = M_PI;
     al_draw_arc(SCR_W/2, SCR_H/2, SHIELD_RADIUS, angIni, deltaAng, white, 3);
 }
 void showRocketLauncher(Player *player, ALLEGRO_DISPLAY* janela){
@@ -164,11 +151,14 @@ void showPlayer(Player *player, ALLEGRO_DISPLAY *janela){
 }
 void showEnemies(Enemy **enemies, int count){
     ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
+    ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
     for(int i=0; i<count; i++){
         if(!enemies[i]->isAlive)
             continue;
         float radius = getRadiusFromVolume(enemies[i]->volume);
-        al_draw_filled_circle(enemies[i]->pos.x, enemies[i]->pos.y, radius, red);
+        al_draw_filled_circle(enemies[i]->pos.x, enemies[i]->pos.y, 
+                                radius, 
+                                enemies[i]->isAlly?green:red);
     }
 }
 // void showProjectiles(Rocket *rocket, Bullet **bullets, int numBullets){
@@ -182,8 +172,8 @@ int checkEnemyShieldCollision(Enemy* enemy, Player *player){
         .center = mid,
         .radius = SHIELD_RADIUS,
         .thickness = SHIELD_THICK,
-        .startAlpha = -PI/2+player->alpha,
-        .deltaAlpha = PI
+        .startAlpha = -M_PI/2+player->alpha,
+        .deltaAlpha = M_PI
     };
     Circle c = {
         .center = enemy->pos,
@@ -235,12 +225,8 @@ Enemy* generateRandomEnemy(){
     e->alpha = getAngleBetweenPoints(e->pos, mid);
     e->volume = rand()%(MAX_VOLUME-MIN_VOLUME)+MIN_VOLUME;
     e->isAlive=1;
-    printf("=======\n");
-    printf("inimigo gerado nas pos x: %f y: %f\n", e->pos.x, e->pos.y);
-    printf("enemy mid x: %f y: %f\n", mid.x, mid.y);
-    printf("enemy alpha: %f graus\n", e->alpha *(180/PI));
-    printf("enemy volume: %f\n", e->volume);
-    printf("=======\n");
+    // 1 in 6 is ally
+    e->isAlly = rand()%6==0;
     return e;
 }
 
@@ -291,20 +277,22 @@ void updatePlayer(Player *player, Enemy **enemies, int nEnemies){
             // killed by shield
             if(checkEnemyShieldCollision(enemies[i], player)){
                 enemies[i]->isAlive = 0;
-                player->score++;
+                if(!enemies[i]->isAlly)
+                    player->score++;
                 printf("player score: %d\n", player->score);
                 continue;
             }
 
             // enemy hit player
             if(checkEnemyPlayerCollision(enemies[i], player)){
-                player->volume -= enemies[i]->volume;
+                int add = enemies[i]->isAlly;
+                float volume = enemies[i]->volume;
+                player->volume += add ? volume : -volume;
                 enemies[i]->isAlive = 0;
                 printf("player volume: %f\n", player->volume);
             }
         }
     }
-    
 }
 Player* generatePlayer(){
     Player *p = (Player*)malloc(sizeof(Player));
@@ -313,9 +301,8 @@ Player* generatePlayer(){
         return NULL;
     }
     p->alpha = 0;
-    p->canShootRocket = 1;
     p->livesRemaining = 3;
-    p->rocketAvaiable = 0;
+    p->level = 1;
     p->score = 0;
     p->shieldAvaiable = 0;
     p->volume = INIT_VOLUME;
