@@ -16,8 +16,10 @@ typedef struct circle{
     float radius;
 } Circle;
 
-float getAngleBetweenPoints(Point p1, Point p2);
+float getVolumeFromRadius(float radius);
 float getRadiusFromVolume(float volume);
+int isAngleBetween(float angle, float a, float b);
+float getAngleBetweenPoints(Point p1, Point p2);
 float getDistance(Point p1, Point p2);
 int checkCircleArcCollision(Arc a, Circle c);
 int checkCircleCicleCollision(Point c1, float r1, Point c2, float r2);

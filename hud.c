@@ -1,16 +1,20 @@
 #include "hud.h"
 #include "a.h"
 #include "timer.h"
+#include <stdio.h>
+#include "allegro5/allegro_ttf.h"
 
 void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo){
 
-    double fps  = 1/(tempo-lastTempo);
+    double fpsD  = 1/(tempo-lastTempo);
+    int fpsI = (int)fpsD;
     al_draw_textf(font, 
         al_map_rgb(255,255,255),
         0,0,
         ALLEGRO_ALIGN_LEFT,
-        "FPS: %.1f", fps);
+        "FPS: %d", fpsI);
 }
+
 void ShowHud(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Player *player, Timer *timer, double tempo, double lastTempo){
     // draw timer and fps
     showFps(font, tempo, lastTempo);

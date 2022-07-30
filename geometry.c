@@ -5,16 +5,37 @@ float getRadiusFromVolume(float volume){
     // r = raiz(area/pi)
     return sqrt(volume/M_PI);
 }
+float getVolumeFromRadius(float radius){
+    // area = pi*r^2
+    return M_PI*radius*radius;
+}
+
 float getAngleBetweenPoints(Point p1, Point p2){
+    // -180 <= alpha <= 180
     double rad = atan2(p1.y-p2.y, p2.x - p1.x);
     return rad;
 }
+
+int isAngleBetween(float angle, float a, float b){
+    // a and b are -pi and pi
+    if(a<0)
+        a += 2*M_PI;
+    if(b<0)
+        b += 2*M_PI;
+    if(a>b)
+        return angle>a || angle<b;
+    else
+        return angle>a && angle<b;
+}
+
 int checkCircleArcCollision(Arc a, Circle c){
     float circleAlpha = getAngleBetweenPoints(a.center, c.center);
     float distArcCircle = getDistance(a.center, c.center)-(c.radius+a.radius+a.thickness);
-    // check if circleAlpha is between startAlpha and startAlpha+deltaAlpha
-    if(circleAlpha >= a.startAlpha && circleAlpha <= a.startAlpha+a.deltaAlpha){
-        return distArcCircle <= 0;
+    printf("dist = %f circleAlpha=%f\n", distArcCircle, circleAlpha);
+
+    int isBetween = isAngleBetween(circleAlpha, a.startAlpha, a.startAlpha+a.deltaAlpha);
+    if(isBetween){
+        return distArcCircle <= 0 && distArcCircle >= -a.thickness;
     }
     return 0;
 }

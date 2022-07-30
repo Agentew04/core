@@ -1,7 +1,7 @@
 modules = timer geometry hud a
 objs = $(addsuffix .o, $(modules))
-libs = -lallegro -lallegro_font -lallegro_primitives -lm
-err = -Wall -Wpedantic -Wextra -Werror
+libs = -lallegro -lallegro_font -lallegro_primitives -lm -lallegro_ttf
+err = -Wall -Wpedantic -Wextra #-Werror
 opt = -O3
 
 all: $(modules)
