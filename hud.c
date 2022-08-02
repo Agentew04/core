@@ -27,4 +27,16 @@ void ShowHud(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Player *player, Timer 
         al_get_display_width(janela)/2, 0,
         ALLEGRO_ALIGN_CENTER,
         "Level: %d", player->level);
+
+    al_draw_textf(font,
+        white,
+        0, al_get_font_line_height(font), 
+        ALLEGRO_ALIGN_LEFT,
+        "Vidas: %d", player->livesRemaining);
+
+    al_draw_textf(font,
+        white,
+        al_get_display_width(janela), al_get_font_line_height(font),
+        ALLEGRO_ALIGN_RIGHT,
+        "Tamanho: %.0f", player->volume);
 }

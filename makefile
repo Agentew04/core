@@ -1,4 +1,4 @@
-modules = timer geometry hud a
+modules = timer geometry hud a entity
 objs = $(addsuffix .o, $(modules))
 libs = -lallegro -lallegro_font -lallegro_primitives -lm -lallegro_ttf
 err = -Wall -Wpedantic -Wextra #-Werror

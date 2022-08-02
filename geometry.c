@@ -16,24 +16,16 @@ float getAngleBetweenPoints(Point p1, Point p2){
     return rad;
 }
 
-int isAngleBetween(float angle, float a, float b){
-    // a and b are -pi and pi
-    if(a<0)
-        a += 2*M_PI;
-    if(b<0)
-        b += 2*M_PI;
-    if(a>b)
-        return angle>a || angle<b;
-    else
-        return angle>a && angle<b;
+int isAngleBetween(float start, float end, float mid){
+    end = (end - start) < 0.0f ? end - start + 2*M_PI : end - start;    
+    mid = (mid - start) < 0.0f ? mid - start + 2*M_PI : mid - start; 
+    return (mid < end);
 }
 
 int checkCircleArcCollision(Arc a, Circle c){
     float circleAlpha = getAngleBetweenPoints(a.center, c.center);
     float distArcCircle = getDistance(a.center, c.center)-(c.radius+a.radius+a.thickness);
-    printf("dist = %f circleAlpha=%f\n", distArcCircle, circleAlpha);
-
-    int isBetween = isAngleBetween(circleAlpha, a.startAlpha, a.startAlpha+a.deltaAlpha);
+    int isBetween = isAngleBetween(a.startAlpha, a.startAlpha+a.deltaAlpha, circleAlpha);
     if(isBetween){
         return distArcCircle <= 0 && distArcCircle >= -a.thickness;
     }
