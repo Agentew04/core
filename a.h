@@ -15,10 +15,6 @@
 
 void init();
 void freeEnemies(Enemy **enemies, int count);
-void showShield(Player *player);
-void showPlayer(Player *player, ALLEGRO_DISPLAY *janela);
-void showEnemies(Enemy **enemies, int count);
-void showRocketLauncher(Player *plPayer, ALLEGRO_DISPLAY *janela);
 void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom);
 
 Projectile* generateProjectile(Player *player, int isRocket);

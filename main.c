@@ -79,13 +79,8 @@ int main(void) {
                 player->alpha = getAngleBetweenPoints(mid, mouse);
             }
             if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
-                // shoot
                 if (evento.mouse.button == 1) {
-
-                    if (tempo - player->lastShot > 1 && player->projectile==NULL) {
-                        player->projectile = generateProjectile(player, player->rocketAvaiable);
-                        player->lastShot = tempo;
-                    }
+                    shoot(player);
                 }
             }
             if(evento.type==ALLEGRO_EVENT_MOUSE_BUTTON_UP){}
@@ -98,33 +93,25 @@ int main(void) {
             }
             if (evento.type == ALLEGRO_EVENT_KEY_UP) {
                 switch (evento.keyboard.keycode) {
-                    case ALLEGRO_KEY_UP:
-                    player->volume+=25;
-                    break;
                 }
             }
         }
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
-
         ALLEGRO_COLOR topFade = al_map_rgb(34, 77, 92);
         ALLEGRO_COLOR bottomFade = al_map_rgb(3, 6, 7);
         draw_vertical_gradient_rect(0,0, SCR_W, SCR_H, topFade, bottomFade);
         showPlayer(player, janela);
         ShowHud(fontMed, janela, player, timer, tempo, lastTempo);
+        showEnemies(enemies, enemyCount);
 
         updateCollision(enemies, enemyCount, player);
         updateMovement(enemies, enemyCount, player);        
 
-        showEnemies(enemies, enemyCount);
-
-        // atualiza tela
         al_flip_display();
 
     }
 
-
-    // Finaliza a janela
     al_destroy_display(janela);
     al_destroy_event_queue(fila_eventos);
     al_destroy_font(fontPeq);
@@ -134,58 +121,6 @@ int main(void) {
     return 0;
 }
 
-// renders
-void showShield(Player *player){
-    ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
-    float angIni = -M_PI/2-player->alpha;
-    float deltaAng = M_PI;
-    al_draw_arc(SCR_W/2, SCR_H/2, SHIELD_RADIUS, angIni, deltaAng, white, 3);
-}
-
-void showRocketLauncher(Player *player, ALLEGRO_DISPLAY* janela){
-    ALLEGRO_COLOR yellow = al_map_rgb(255, 255, 0);
-    int bmpSize = 32;
-    ALLEGRO_BITMAP *rocket = al_create_bitmap(bmpSize, bmpSize);
-    al_set_target_bitmap(rocket);
-    Point p1 = { 0, bmpSize/2 };
-    Point p2 = { bmpSize, 0 };
-    Point p3 = { bmpSize, bmpSize };
-    al_draw_filled_triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, yellow);
-    al_set_target_backbuffer(janela);
-    Point rotCenter = { SCR_W/2, SCR_H/2 };
-    al_draw_rotated_bitmap(rocket, 
-                            SHIELD_RADIUS, bmpSize/2,
-                            rotCenter.x, rotCenter.y, 
-                            -player->alpha, 0);
-    al_destroy_bitmap(rocket);
-}
-
-void showPlayer(Player *player, ALLEGRO_DISPLAY *janela){
-    if(player->volume<=0)
-        return;
-    ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
-    float radius = getRadiusFromVolume(player->volume);
-    showShield(player);
-    showRocketLauncher(player, janela);
-    al_draw_filled_circle(SCR_W/2, SCR_H/2, radius, green);
-}
-
-void showEnemies(Enemy **enemies, int count){
-    ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
-    ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
-    for(int i=0; i<count; i++){
-        if(!enemies[i]->isAlive)
-            continue;
-
-        float radius = getRadiusFromVolume(enemies[i]->volume);
-        al_draw_filled_circle(enemies[i]->pos.x, enemies[i]->pos.y, 
-                                radius, 
-                                enemies[i]->isAlly?green:red);
-    }
-}
-
-
-
 
 void freeEnemies(Enemy **enemies, int nEnemies){
     for(int i=0; i<nEnemies; i++){
@@ -193,10 +128,6 @@ void freeEnemies(Enemy **enemies, int nEnemies){
     }
     free(enemies);
 }
-// end enemies
-
-
-// end player
 
 void updateMovement(Enemy **enemies, int nEnemies, Player *player){
     // enemies
@@ -204,8 +135,13 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
         if(!enemies[i]->isAlive)
             continue;
         Enemy *e = enemies[i];
-        float dx = e->speed*cos(e->alpha);
-        float dy = e->speed*(-sin(e->alpha));
+        float finalSpeed = e->speed;
+        if(al_get_time()<player->slowUntil){
+            printf("slowed\n");
+            finalSpeed *= 0.25;
+        }
+        float dx = finalSpeed*cos(e->alpha);
+        float dy = finalSpeed*(-sin(e->alpha));
         e->pos.x += dx;
         e->pos.y += dy;
 
@@ -219,7 +155,7 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
         float a = (e->relMid.x - e->pos.x)/dx;
         int alphaOutOfScreen = a<0;
         if(outOfScreen && alphaOutOfScreen){
-            e->isAlive = 0;
+            //e->isAlive = 0;
         }
     }
 
@@ -230,15 +166,35 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
         float dy = proj->speed*(-sin(proj->alpha));
         proj->pos.x += dx;
         proj->pos.y += dy;
-        if(proj->bouncesLeft>0 && proj->type==ROCKET){
+        int isOut = proj->pos.x<0||
+            proj->pos.x>SCR_W||
+            proj->pos.y<0||
+            proj->pos.y>SCR_H;
+        
+        
+        if(proj->bouncesLeft>0 && proj->type==ROCKET && isOut){
             proj->bouncesLeft--;
-            // bounce off
-            float A = proj->alpha;
-            float B = M_PI - 2*A;
-            float C = M_PI - (A + B);
-            float newAlpha = M_PI - C;
-            proj->alpha = newAlpha;
-        }else{
+            Point mid = {SCR_W/2, SCR_H/2};
+            Point normal = vecFromPoints(proj->pos, mid);
+            int outLeftRight = proj->pos.x<0||proj->pos.x>SCR_W;
+            int outUpDown = proj->pos.y<0||proj->pos.y>SCR_H;
+            if(outLeftRight){
+                normal.y = 0;
+            }
+            else if(outUpDown){
+                normal.x = 0;
+            }
+            normal = vecNormalize(normal);
+            Point vecMove = vecFromAngleLength(proj->alpha, proj->speed);
+            Point reflex = vecSubtract(
+                vecMove, 
+                vecMultiply(
+                    normal,
+                    dotProduct(vecMove, normal)*2
+                )    
+            );
+            proj->alpha = vecAngle(reflex);
+        }else if(isOut){
             free(proj);
             player->projectile = NULL;
         }
@@ -259,45 +215,78 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
 
         // killed by shield
         if(checkEnemyShieldCollision(e, player)){
+            printf("enemy killed by shield\n");
             e->isAlive = 0;
             if(!e->isAlly)
-                player->score++;
+                addScore(1, player);
             continue;
         }
 
         // enemy hit player
         if(checkEnemyPlayerCollision(e, player)){
+            printf("enemy hit player\n");
             player->volume += e->isAlly ? e->volume : -e->volume;
             e->isAlive = 0;
             if(player->volume<=0){
                 player->livesRemaining--;
                 player->volume = INIT_VOLUME;
             }
+            continue;
+        }
+
+        // enemy hit big shield
+        if(player->shieldActive){
+            Circle c1 = {
+                .center = { SCR_W/2, SCR_H/2},
+                .radius = getRadiusFromVolume(player->volume)
+            };
+            Circle c2 = {
+                .center = { e->pos.x, e->pos.y},
+                .radius = getRadiusFromVolume(e->volume)
+            };
+            if(checkCircleCicleCollision(c1,c2)){
+                addScore(3, player);
+                continue;
+            }
         }
 
         // projectile hit enemy
         Projectile *proj = player->projectile;
-        if(proj!=NULL)
-        if(checkCircleCicleCollision(proj->pos, PROJ_RADIUS, e->pos, getRadiusFromVolume(e->volume))){
+        if(proj!=NULL){
+            Circle c1 = {
+                .center = proj->pos,
+                .radius = PROJ_RADIUS
+            };
+            Circle c2 = {
+                .center = e->pos,
+                .radius = getRadiusFromVolume(e->volume)
+            };
+            if(!checkCircleCicleCollision(c1, c2))
+                continue;
+            printf("colisao tiro x inimigo\n");
             e->isAlive = 0;
             proj->enemiesDestroyed++;
+            float diam = getRadiusFromVolume(player->volume);
+            diam += (diam/100)*2; // add 2% of diameter
+            player->volume += getVolumeFromRadius(diam);
             // colidiu
             if(proj->type==BULLET){
+                // bullet
+                addScore(1, player);
                 free(proj);
-                player->score++;
                 player->projectile = NULL;
-                float diam = getRadiusFromVolume(player->volume)*2;
-                diam += (diam/100)*2; // add 2% of diameter
-                player->volume += getVolumeFromRadius(diam/2);
             }else{
-                
+                // rocket
+                if(e->isAlly){
+                    player->slowUntil = al_get_time() + SLOW_TIME;
+                }else{
+                    addScore(5, player);
+                }
+                if(proj->enemiesDestroyed>=3){
+                    free(proj);
+                    player->projectile = NULL;
+                }
             }
-            player->score+= proj->type==BULLET ? 2 : 5;
-            if(proj->type==BULLET){
-                free(proj);
-                player->projectile = NULL;
-                continue;
-            }
-        }
+       }
     }
 }

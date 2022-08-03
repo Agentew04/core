@@ -10,7 +10,7 @@ void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo){
     int fpsI = (int)fpsD;
     al_draw_textf(font, 
         al_map_rgb(255,255,255),
-        0,0,
+        0,al_get_display_height(al_get_current_display())-al_get_font_line_height(font),
         ALLEGRO_ALIGN_LEFT,
         "FPS: %d", fpsI);
 }
@@ -22,6 +22,11 @@ void ShowHud(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Player *player, Timer 
 
     // current level
     ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
+    al_draw_textf(font,
+        white,
+        0,0,
+        ALLEGRO_ALIGN_LEFT,
+        "Score: %d", player->score);
     al_draw_textf(font, 
         white,
         al_get_display_width(janela)/2, 0,

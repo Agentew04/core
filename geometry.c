@@ -1,42 +1,96 @@
 #include "geometry.h"
 #include <math.h>
+#include <stdio.h>
 
+float getDistance(Point p1, Point p2){
+    return sqrt(pow(p1.x-p2.x, 2)+pow(p1.y-p2.y, 2));
+}
+float getAngleBetweenPoints(Point p1, Point p2){
+    double rad = atan2(p1.y-p2.y, p2.x - p1.x);
+    return rad;
+}  
+float toDegrees(float rad){
+    return rad*180/M_PI;
+}
+float toRadians(float deg){
+    return deg*M_PI/180;
+}
 float getRadiusFromVolume(float volume){
-    // r = raiz(area/pi)
     return sqrt(volume/M_PI);
 }
 float getVolumeFromRadius(float radius){
-    // area = pi*r^2
     return M_PI*radius*radius;
 }
-
-float getAngleBetweenPoints(Point p1, Point p2){
-    // -180 <= alpha <= 180
-    double rad = atan2(p1.y-p2.y, p2.x - p1.x);
-    return rad;
-}
-
 int isAngleBetween(float start, float end, float mid){
-    end = (end - start) < 0.0f ? end - start + 2*M_PI : end - start;    
-    mid = (mid - start) < 0.0f ? mid - start + 2*M_PI : mid - start; 
+    end = (end - start) < 0.0f ? end - start + 360.0 : end - start;    
+    mid = (mid - start) < 0.0f ? mid - start + 360.0 : mid - start; 
     return (mid < end);
+}
+float vecLength(Point p){
+    return sqrt(p.x*p.x + p.y*p.y);
+}
+float vecAngle(Point p){
+    return atan2(p.y, p.x);
+}
+Point vecFromAngleLength(float angle, float length){
+    Point p;
+    p.x = cos(angle)*length;
+    p.y = sin(angle)*length;
+    return p;
+}
+Point vecFromPoints(Point p1, Point p2){
+    Point p;
+    p.x = p2.x - p1.x;
+    p.y = p2.y - p1.y;
+    return p;
+}
+float dotProduct(Point p1, Point p2){
+    return p1.x*p2.x + p1.y*p2.y;
+}
+Point vecNormalize(Point p){
+    float length = vecLength(p);
+    Point pn;
+    pn.x = p.x/length;
+    pn.y = p.y/length;
+    return pn;
+}
+Point vecSubtract(Point p1, Point p2){
+    Point p;
+    p.x = p1.x - p2.x;
+    p.y = p1.y - p2.y;
+    return p;
+}
+Point crossProduct(Point p1, Point p2){
+    Point p;
+    p.x = p1.x*p2.y - p1.y*p2.x;
+    p.y = p1.x*p2.x + p1.y*p2.y;
+    return p;
+}
+Point vecMultiply(Point p, float scalar){
+    Point pn;
+    pn.x = p.x*scalar;
+    pn.y = p.y*scalar;
+    return pn;
 }
 
 int checkCircleArcCollision(Arc a, Circle c){
-    float circleAlpha = getAngleBetweenPoints(a.center, c.center);
-    float distArcCircle = getDistance(a.center, c.center)-(c.radius+a.radius+a.thickness);
-    int isBetween = isAngleBetween(a.startAlpha, a.startAlpha+a.deltaAlpha, circleAlpha);
-    if(isBetween){
-        return distArcCircle <= 0 && distArcCircle >= -a.thickness;
-    }
-    return 0;
+    // get if touching
+    Circle arcCircle = {
+        .center = a.center,
+        .radius = a.radius + a.thickness
+    };
+    int isInPerimeter = checkCircleCicleCollision(c, arcCircle);
+
+    // get if inside range
+    float angle = getAngleBetweenPoints(c.center, a.center);
+    float start = a.startAlpha;
+    float end = a.startAlpha + a.deltaAlpha;
+    int isInRange = isAngleBetween(toDegrees(start), toDegrees(end), toDegrees(angle));
+    return isInPerimeter && isInRange;
 }
-int checkCircleCicleCollision(Point c1, float r1, Point c2, float r2){
-    float dist = getDistance(c1, c2);
-    if(dist<r1+r2)
+int checkCircleCicleCollision(Circle c1, Circle c2){
+    float dist = getDistance(c1.center, c2.center);
+    if(dist<=c1.radius+c2.radius)
         return 1;
     return 0;
-}
-float getDistance(Point p1, Point p2){
-    return sqrt(pow(p1.x-p2.x, 2)+pow(p1.y-p2.y, 2));
 }
