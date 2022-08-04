@@ -93,10 +93,6 @@ int main(void) {
                         if(!player->isPaused)
                             activateArmor(player);
                         break;
-                    case ALLEGRO_KEY_K:
-                        if(!player->isPaused)
-                            player->volume = 14900;
-                        break;
                 }
             }
             if (evento.type == ALLEGRO_EVENT_KEY_UP) {
