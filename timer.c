@@ -1,6 +1,6 @@
 #include "timer.h"
-#include "allegro5/allegro.h"
-#include "allegro5/allegro_font.h"
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_font.h>
 
 Timer* initTimer(){
     ALLEGRO_TIMER *alTimer = al_create_timer(1);
@@ -28,6 +28,13 @@ void resetTimer(Timer *timer){
     al_destroy_timer(timer->timer);
     timer->isPaused=1;
     timer->timer = al_create_timer(1);
+}
+
+void resumeTimer(Timer *timer){
+    if(timer->isPaused){
+        al_start_timer(timer->timer);
+        timer->isPaused=0;
+    }
 }
 
 int getMinutes(Timer *timer){

@@ -8,7 +8,7 @@
 #include <allegro5/allegro_ttf.h>
 
 
-#include "a.h"
+#include "main.h"
 #include "timer.h"
 #include "geometry.h"
 #include "hud.h"
@@ -43,7 +43,7 @@ int main(void) {
     ALLEGRO_FONT *fontPeq, *fontMed;
     ALLEGRO_EVENT_QUEUE *fila_eventos;
     init(&fila_eventos, &janela);
-    fontPeq = al_create_builtin_font();
+    fontPeq = al_load_ttf_font("Roboto/Roboto-Regular.ttf", 12, 0);
     fontMed = al_load_ttf_font("Roboto/Roboto-Bold.ttf", 36, 0);
 
     // 'global' vars
@@ -56,7 +56,7 @@ int main(void) {
     startTimer(timer);
 
     // alloc enemies
-    int enemyCount=20;
+    int enemyCount=25;
     Enemy **enemies = (Enemy**)malloc(enemyCount*sizeof(Enemy*));
     for (int i = 0; i < enemyCount; i++)
         enemies[i] = generateRandomEnemy();
@@ -87,26 +87,36 @@ int main(void) {
             if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
                 switch (evento.keyboard.keycode) {
                     case ALLEGRO_KEY_ESCAPE:
-                        rodando=0;
+                        togglePause(player, timer);
                     break;
+                    case ALLEGRO_KEY_SPACE:
+                        activateArmor(player);
+                        break;
                 }
             }
             if (evento.type == ALLEGRO_EVENT_KEY_UP) {
                 switch (evento.keyboard.keycode) {
+                    case ALLEGRO_KEY_SPACE:
+                        deactivateArmor(player);
+                        break;
                 }
             }
         }
+
+        updateCollision(enemies, enemyCount, player);
+        updateMovement(enemies, enemyCount, player);   
+        updateOther(player);     
+        respawnEnemies(enemies, enemyCount);
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
         ALLEGRO_COLOR topFade = al_map_rgb(34, 77, 92);
         ALLEGRO_COLOR bottomFade = al_map_rgb(3, 6, 7);
         draw_vertical_gradient_rect(0,0, SCR_W, SCR_H, topFade, bottomFade);
+        
         showPlayer(player, janela);
         ShowHud(fontMed, janela, player, timer, tempo, lastTempo);
         showEnemies(enemies, enemyCount);
 
-        updateCollision(enemies, enemyCount, player);
-        updateMovement(enemies, enemyCount, player);        
 
         al_flip_display();
 
@@ -120,7 +130,14 @@ int main(void) {
 
     return 0;
 }
-
+void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom) {
+    ALLEGRO_VERTEX v[] = {
+        {.x=x    , .y=y    , .z=0, .color=top},
+        {.x=x + w, .y=y    , .z=0, .color=top},
+        {.x=x    , .y=y + h, .z=0, .color=bottom},
+        {.x=x + w, .y=y + h, .z=0, .color=bottom}};
+    al_draw_prim(v, NULL, NULL, 0, 4, ALLEGRO_PRIM_TRIANGLE_STRIP);
+}
 
 void freeEnemies(Enemy **enemies, int nEnemies){
     for(int i=0; i<nEnemies; i++){
@@ -136,10 +153,8 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
             continue;
         Enemy *e = enemies[i];
         float finalSpeed = e->speed;
-        if(al_get_time()<player->slowUntil){
-            printf("slowed\n");
+        if(al_get_time()<player->slowUntil)
             finalSpeed *= 0.25;
-        }
         float dx = finalSpeed*cos(e->alpha);
         float dy = finalSpeed*(-sin(e->alpha));
         e->pos.x += dx;
@@ -155,7 +170,7 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
         float a = (e->relMid.x - e->pos.x)/dx;
         int alphaOutOfScreen = a<0;
         if(outOfScreen && alphaOutOfScreen){
-            //e->isAlive = 0;
+            e->isAlive = 0;
         }
     }
 
@@ -202,6 +217,25 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
 
 }
 
+void updateOther(Player *player){
+    // draw life if armor
+    if(player->armor.active){
+        double time = al_get_time();
+        if(time>player->armor.startTime+player->armor.duration){
+            player->armor.active=0;
+        }else{
+            double deltaTime = 0.25f; // 2 ticks per second
+            double damage = 2.0f; // 2 damage per tick
+            if(time>player->armor.lastHit+deltaTime){
+                player->armor.lastHit = time;
+                player->volume -= damage;
+                if(player->volume<50)
+                    player->volume = 50;
+            }
+        }
+    }
+}
+
 void updateCollision(Enemy **enemies, int nEnemies, Player *player){
     if(player->volume<=0 || player->livesRemaining<=0)
         return;
@@ -215,7 +249,6 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
 
         // killed by shield
         if(checkEnemyShieldCollision(e, player)){
-            printf("enemy killed by shield\n");
             e->isAlive = 0;
             if(!e->isAlly)
                 addScore(1, player);
@@ -224,7 +257,6 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
 
         // enemy hit player
         if(checkEnemyPlayerCollision(e, player)){
-            printf("enemy hit player\n");
             player->volume += e->isAlly ? e->volume : -e->volume;
             e->isAlive = 0;
             if(player->volume<=0){
@@ -234,11 +266,11 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
             continue;
         }
 
-        // enemy hit big shield
-        if(player->shieldActive){
+        // enemy hit armor
+        if(player->armor.active){
             Circle c1 = {
                 .center = { SCR_W/2, SCR_H/2},
-                .radius = getRadiusFromVolume(player->volume)
+                .radius = player->armor.radius
             };
             Circle c2 = {
                 .center = { e->pos.x, e->pos.y},
@@ -246,6 +278,7 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
             };
             if(checkCircleCicleCollision(c1,c2)){
                 addScore(3, player);
+                e->isAlive = 0;
                 continue;
             }
         }
@@ -263,12 +296,11 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
             };
             if(!checkCircleCicleCollision(c1, c2))
                 continue;
-            printf("colisao tiro x inimigo\n");
             e->isAlive = 0;
             proj->enemiesDestroyed++;
-            float diam = getRadiusFromVolume(player->volume);
-            diam += (diam/100)*2; // add 2% of diameter
-            player->volume += getVolumeFromRadius(diam);
+            float diam = getRadiusFromVolume(player->volume)*2;
+            diam += diam*0.02;
+            player->volume = getVolumeFromRadius(diam/2);
             // colidiu
             if(proj->type==BULLET){
                 // bullet
@@ -289,4 +321,15 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
             }
        }
     }
+}
+
+void respawnEnemies(Enemy **enemies, int nEnemies){
+    for (int i = 0; i < nEnemies; i++)
+    {
+        if(enemies[i]->isAlive)
+            continue;
+        free(enemies[i]);
+        enemies[i] = generateRandomEnemy();
+    }
+    
 }

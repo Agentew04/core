@@ -1,7 +1,7 @@
 #ifndef HUD_H
 #define HUD_H
 
-#include "a.h"
+#include "entity.h"
 #include "timer.h"
 #include "allegro5/allegro_font.h"
 

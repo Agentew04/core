@@ -1,5 +1,5 @@
 #include "hud.h"
-#include "a.h"
+#include "entity.h"
 #include "timer.h"
 #include <stdio.h>
 #include "allegro5/allegro_ttf.h"
@@ -22,6 +22,8 @@ void ShowHud(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Player *player, Timer 
 
     // current level
     ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
+    ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
+    ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
     al_draw_textf(font,
         white,
         0,0,
@@ -44,4 +46,10 @@ void ShowHud(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Player *player, Timer 
         al_get_display_width(janela), al_get_font_line_height(font),
         ALLEGRO_ALIGN_RIGHT,
         "Tamanho: %.0f", player->volume);
+    
+    al_draw_text(font,
+        player->canPause ? green : red,
+        al_get_display_width(janela), al_get_display_height(janela)-al_get_font_line_height(font),
+        ALLEGRO_ALIGN_RIGHT,
+        player->canPause ? "Pode pausar" : "Não pode pausar");
 }

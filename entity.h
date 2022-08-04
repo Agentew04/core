@@ -1,8 +1,8 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include "a.h"
 #include "geometry.h"
+#include "timer.h"
 
 #define SHIELD_RADIUS 75
 #define SHIELD_THICK 6
@@ -23,6 +23,15 @@
 #define ENMY_MIN_SPEED 1
 #define BUFFER_SIZE 500
 
+
+typedef struct armor{
+    int available;
+    int active;
+    double startTime;
+    double duration;
+    double radius;
+    double lastHit;
+} Armor;
 typedef struct projectile{
     Point pos;
     float speed;
@@ -37,13 +46,16 @@ typedef struct player{
     int livesRemaining;
     int score;
     int level;
+
     int rocketAvaiable;
-    int shieldAvaiable;
-    int shieldActive;
     Projectile *projectile;
     double lastShot;
     double slowUntil;
-    
+
+    Armor armor;
+
+    int canPause;
+    int isPaused;
 } Player;
 typedef struct enemy{
     Point pos;
@@ -63,12 +75,18 @@ int checkEnemyPlayerCollision(Enemy* enemy, Player *player);
 void shoot(Player *player);
 void addScore(int score, Player *player);
 int getLevelXp(int level);
+void togglePause(Player *player, Timer *timer);
+void activateArmor(Player *player);
+void deactivateArmor(Player *player);
 
+int randomInt(int min, int max);
+float randomFloat(float min, float max);
+
+void showArmor(Player *player);
 void showShield(Player *player);
 void showPlayer(Player *player, ALLEGRO_DISPLAY *janela);
 void showEnemies(Enemy **enemies, int count);
 void showRocketLauncher(Player *plPayer, ALLEGRO_DISPLAY *janela);
 void showProjectile(Player *player);
-
 
 #endif 

@@ -14,14 +14,11 @@
 #define SCR_H 720
 
 void init();
-void freeEnemies(Enemy **enemies, int count);
 void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom);
-
-Projectile* generateProjectile(Player *player, int isRocket);
-
-// update functions
+void freeEnemies(Enemy **enemies, int count);
 void updateMovement(Enemy **enemies, int nEnemies, Player *player);
 void updateCollision(Enemy **enemies, int nEnemies, Player *player);
-
+void updateOther(Player *player);
+void respawnEnemies(Enemy **enemies, int nEnemies);
 
 #endif // A_H
