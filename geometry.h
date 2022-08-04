@@ -4,6 +4,9 @@
 typedef struct point{
     float x, y;
 } Point;
+typedef struct Rectangle{
+    Point p1, p2;
+} Rectangle;
 typedef struct arc{
     Point center;
     float radius;
@@ -25,6 +28,7 @@ float getVolumeFromRadius(float radius);
 int isAngleBetween(float angle, float a, float b);
 int checkCircleArcCollision(Arc a, Circle c);
 int checkCircleCicleCollision(Circle c1, Circle c2);
+int pointInsideRect(Point p, Rectangle r);
 
 float vecLength(Point p);
 float vecAngle(Point p);

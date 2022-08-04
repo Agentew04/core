@@ -46,6 +46,7 @@ typedef struct player{
     int livesRemaining;
     int score;
     int level;
+    Timer *timer;
 
     int rocketAvaiable;
     Projectile *projectile;
@@ -75,7 +76,8 @@ int checkEnemyPlayerCollision(Enemy* enemy, Player *player);
 void shoot(Player *player);
 void addScore(int score, Player *player);
 int getLevelXp(int level);
-void togglePause(Player *player, Timer *timer);
+float getSpeedIncrease(int level);
+void togglePause(Player *player);
 void activateArmor(Player *player);
 void deactivateArmor(Player *player);
 

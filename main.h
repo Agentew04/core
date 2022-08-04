@@ -13,6 +13,12 @@
 #define SCR_W 1280
 #define SCR_H 720
 
+#define MENU_MAIN 0
+#define MENU_HELP 1
+#define MENU_GAME 2
+#define MENU_END 3
+#define MENU_WIN 4
+
 void init();
 void draw_vertical_gradient_rect(float x, float y, float w, float h, ALLEGRO_COLOR top, ALLEGRO_COLOR bottom);
 void freeEnemies(Enemy **enemies, int count);

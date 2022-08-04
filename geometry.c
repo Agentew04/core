@@ -91,3 +91,6 @@ int checkCircleCicleCollision(Circle c1, Circle c2){
         return 1;
     return 0;
 }
+int pointInsideRect(Point p, Rectangle r){
+    return p.x >= r.p1.x && p.x <= r.p2.x && p.y >= r.p1.y && p.y <= r.p2.y;
+}

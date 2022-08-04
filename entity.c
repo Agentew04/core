@@ -16,6 +16,8 @@ Player* generatePlayer(){
     p->livesRemaining = 3;
     p->level = 1;
     p->score = 0;
+    p->timer = initTimer();
+    p->isPaused = 0;
 
     p->lastShot = 0;
     p->projectile = NULL;
@@ -135,13 +137,28 @@ void showProjectile(Player *player){
 
 void showRocketLauncher(Player *player, ALLEGRO_DISPLAY* janela){
     ALLEGRO_COLOR yellow = al_map_rgb(255, 255, 0);
-    int bmpSize = 32;
+    ALLEGRO_COLOR gray = al_map_rgb(128, 128, 128);
+    ALLEGRO_COLOR orange = al_map_rgb(255, 165, 0);
+    int bmpSize = 32    ;
+    float unit = (float)bmpSize/4;
+    al_set_new_bitmap_flags(ALLEGRO_MIPMAP);
     ALLEGRO_BITMAP *rocket = al_create_bitmap(bmpSize, bmpSize);
     al_set_target_bitmap(rocket);
-    Point p1 = { 0, bmpSize/2 };
-    Point p2 = { bmpSize, 0 };
-    Point p3 = { bmpSize, bmpSize };
-    al_draw_filled_triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, yellow);
+    al_clear_to_color(al_map_rgba(0,0,0,0));
+    Point rP1 = { 3*unit, 0 };
+    Point rP2 = { 4*unit, 4*unit };
+
+    Point TP1 = { 0, 2*unit };
+    Point TP2 = { 3*unit, 0 };
+    Point TP3 = { 3*unit, 4*unit };
+
+    Point tP1 = { 0, 2*unit };
+    Point tP2 = { 1*unit, 1*unit };
+    Point tP3 = { 1*unit, 3*unit };
+
+    al_draw_filled_rectangle(rP1.x, rP1.y, rP2.x, rP2.y, gray);
+    al_draw_filled_triangle(TP1.x, TP1.y, TP2.x, TP2.y, TP3.x, TP3.y, orange);
+    al_draw_filled_triangle(tP1.x, tP1.y, tP2.x, tP2.y, tP3.x, tP3.y, yellow);
     al_set_target_backbuffer(janela);
     Point rotCenter = { SCR_W/2, SCR_H/2 };
     al_draw_rotated_bitmap(rocket, 
@@ -223,6 +240,11 @@ int getLevelXp(int level){
     float result = log + (5*level) + 5;
     return floor(result);
 }
+float getSpeedIncrease(int level){
+    // y = tg^-1(x)+ x/32 + 0.2
+    float result = atanf(level)/2 +  level/32 + 0.1;
+    return result;
+}
 
 int randomInt(int min, int max){
     return rand() % (max - min + 1) + min;
@@ -245,17 +267,17 @@ void shoot(Player *player){
         player->rocketAvaiable=0;
 }
 
-void togglePause(Player *player, Timer *timer){
+void togglePause(Player *player){
     if(!player->livesRemaining==0 && player->volume<=0)
         return;
 
     if(!player->isPaused && player->canPause){
         player->canPause = 0;
         player->isPaused = 1;
-        pauseTimer(timer);
+        pauseTimer(player->timer);
     }else if(player->isPaused){
         player->isPaused = 0;
-        resumeTimer(timer);
+        resumeTimer(player->timer);
     }
 }
 

@@ -11,7 +11,7 @@
 #include "main.h"
 #include "timer.h"
 #include "geometry.h"
-#include "hud.h"
+#include "gui.h"
 #include "entity.h"
 
 void init(ALLEGRO_EVENT_QUEUE **fila_eventos, ALLEGRO_DISPLAY **janela){
@@ -23,6 +23,8 @@ void init(ALLEGRO_EVENT_QUEUE **fila_eventos, ALLEGRO_DISPLAY **janela){
     al_install_mouse();
     al_install_keyboard();
     *fila_eventos = al_create_event_queue();
+    al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
+    al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
     *janela = al_create_display(SCR_W, SCR_H);
 
     if(!*fila_eventos || !*janela){
@@ -52,8 +54,7 @@ int main(void) {
     Player *player = generatePlayer();
     Point mouse = {0, 0};
     const Point mid = {SCR_W/2, SCR_H/2};
-    Timer *timer = initTimer();
-    startTimer(timer);
+    int currentMenu = MENU_MAIN;
 
     // alloc enemies
     int enemyCount=25;
@@ -80,43 +81,57 @@ int main(void) {
             }
             if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
                 if (evento.mouse.button == 1) {
-                    shoot(player);
+                    if(currentMenu==MENU_GAME)
+                        shoot(player);
+                    else{
+                        handleButtons(&currentMenu, mouse, &player);
+                    }
                 }
             }
-            if(evento.type==ALLEGRO_EVENT_MOUSE_BUTTON_UP){}
             if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
                 switch (evento.keyboard.keycode) {
                     case ALLEGRO_KEY_ESCAPE:
-                        togglePause(player, timer);
+                        togglePause(player);
                     break;
                     case ALLEGRO_KEY_SPACE:
-                        activateArmor(player);
+                        if(!player->isPaused)
+                            activateArmor(player);
                         break;
                 }
             }
             if (evento.type == ALLEGRO_EVENT_KEY_UP) {
-                switch (evento.keyboard.keycode) {
-                    case ALLEGRO_KEY_SPACE:
-                        deactivateArmor(player);
-                        break;
-                }
+                if(!player->isPaused && currentMenu==MENU_GAME)
+                    switch (evento.keyboard.keycode) {
+                        case ALLEGRO_KEY_SPACE:
+                            deactivateArmor(player);
+                            break;
+                    }
             }
         }
+        switch (currentMenu){
+        case MENU_MAIN:
+            showMainMenu(fontMed);
+            break;
+        case MENU_GAME:
+            showGame(player, enemies, enemyCount, lastTempo, fontMed);
+            break;
+        case MENU_END:
+            showEnd(fontMed, player, 0);
+            break;
+        case MENU_HELP:
+            showHelp(fontMed);
+            break;
+        case MENU_WIN:
+            showEnd(fontMed, player, 1);
+            break;
+        }
 
-        updateCollision(enemies, enemyCount, player);
-        updateMovement(enemies, enemyCount, player);   
-        updateOther(player);     
-        respawnEnemies(enemies, enemyCount);
-
-        al_clear_to_color(al_map_rgb(0, 0, 0));
-        ALLEGRO_COLOR topFade = al_map_rgb(34, 77, 92);
-        ALLEGRO_COLOR bottomFade = al_map_rgb(3, 6, 7);
-        draw_vertical_gradient_rect(0,0, SCR_W, SCR_H, topFade, bottomFade);
-        
-        showPlayer(player, janela);
-        ShowHud(fontMed, janela, player, timer, tempo, lastTempo);
-        showEnemies(enemies, enemyCount);
-
+        if(player->livesRemaining<=0){
+            currentMenu = MENU_END;
+        }
+        if(player->volume >= MAX_VOLUME){
+            currentMenu = MENU_WIN;
+        }
 
         al_flip_display();
 
@@ -125,7 +140,8 @@ int main(void) {
     al_destroy_display(janela);
     al_destroy_event_queue(fila_eventos);
     al_destroy_font(fontPeq);
-    freeTimer(timer);
+    freeTimer(player->timer);
+    free(player->projectile);
     freeEnemies(enemies, enemyCount);
 
     return 0;
@@ -155,6 +171,10 @@ void updateMovement(Enemy **enemies, int nEnemies, Player *player){
         float finalSpeed = e->speed;
         if(al_get_time()<player->slowUntil)
             finalSpeed *= 0.25;
+        printf("speed increase: %f\n", getSpeedIncrease(player->level));
+        printf("old speed: %f\n", finalSpeed);
+        finalSpeed *= getSpeedIncrease(player->level);
+        printf("new speed: %f\n", finalSpeed);
         float dx = finalSpeed*cos(e->alpha);
         float dy = finalSpeed*(-sin(e->alpha));
         e->pos.x += dx;
@@ -324,6 +344,7 @@ void updateCollision(Enemy **enemies, int nEnemies, Player *player){
 }
 
 void respawnEnemies(Enemy **enemies, int nEnemies){
+
     for (int i = 0; i < nEnemies; i++)
     {
         if(enemies[i]->isAlive)
@@ -333,3 +354,8 @@ void respawnEnemies(Enemy **enemies, int nEnemies){
     }
     
 }
+
+
+
+
+
