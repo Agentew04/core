@@ -16,11 +16,9 @@ void showFps(ALLEGRO_FONT *font, double tempo, double lastTempo){
 }
 
 void showHud(ALLEGRO_FONT *font, ALLEGRO_DISPLAY *janela, Player *player, Timer *timer, double tempo, double lastTempo){
-    // draw timer and fps
     showFps(font, tempo, lastTempo);
     showTimer(font, janela, timer);
 
-    // current level
     ALLEGRO_COLOR white = al_map_rgb(255, 255, 255);
     ALLEGRO_COLOR green = al_map_rgb(0, 255, 0);
     ALLEGRO_COLOR red = al_map_rgb(255, 0, 0);
@@ -62,7 +60,7 @@ void showGame(Player *player, Enemy **enemies, int enemyCount, double lastTempo,
         updateCollision(enemies, enemyCount, player);
         updateMovement(enemies, enemyCount, player);   
         updateOther(player);     
-        respawnEnemies(enemies, enemyCount);
+        respawnEnemies(enemies, enemyCount, 0);
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
         ALLEGRO_COLOR topFade = al_map_rgb(34, 77, 92);
@@ -109,14 +107,12 @@ void showMainMenu(ALLEGRO_FONT *font){
     float width = al_get_display_width(janela);
     float height = al_get_display_height(janela);
 
-    // draw title
     al_draw_text(fontBlack,
         white,
         width/2, al_get_font_line_height(fontBlack),
         ALLEGRO_ALIGN_CENTER,
         "Core: A defensive game");
 
-    // render buttons
     Button bPlay = {
         .text = "Jogar",
         .p1 = { .x=width/2*0.9f, .y=(height/2)*0.9f},
@@ -193,28 +189,28 @@ void showButton(Button b, ALLEGRO_FONT *font){
         b.text);
 }
 
-void handleButtons(int *currentMenu, Point mouse, Player **playerPtr){
+void handleButtons(int *currentMenu, Point mouse, Player **playerPtr, Enemy **enemies, int enemiesCount){
     ALLEGRO_DISPLAY *janela = al_get_current_display();
     float width = al_get_display_width(janela);
     float height = al_get_display_height(janela);
     Button buttons[5] = {{
-        .text = "Jogar", // 0
+        .text = "Jogar", 
         .p1 = { .x=width/2*0.9f, .y=(height/2)*0.9f},
         .p2 = { .x=width/2*1.1f, .y=(height/2)*1.1f}
     },{
-        .text = "Ajuda", // 1
+        .text = "Ajuda", 
         .p1 = { .x=width/2*0.9f, .y=(2*height/3)*0.92f},
         .p2 = { .x=width/2*1.1f, .y=(2*height/3)*1.08f}
     },{
-        .text = "Voltar", // 2
+        .text = "Voltar", 
         .p1 = { .x=width/2*0.9f, .y=(2*height/3)*0.92f},
         .p2 = { .x=width/2*1.1f, .y=(2*height/3)*1.08f}
     },{
-        .text = "Sim", // 3
+        .text = "Sim", 
         .p1 = { .x=width/2*0.9f, .y=(3*height/5)*0.9f},
         .p2 = { .x=width/2*1.1f, .y=(3*height/5)*1.1f}
     },{ 
-        .text = "Não", // 4
+        .text = "Não", 
         .p1 = { .x=width/2*0.9f, .y=(4*height/5)*0.92f},
         .p2 = { .x=width/2*1.1f, .y=(4*height/5)*1.08f}
     }
@@ -232,6 +228,7 @@ void handleButtons(int *currentMenu, Point mouse, Player **playerPtr){
                     case 3:
                         free(*playerPtr);
                         *playerPtr = generatePlayer();
+                        respawnEnemies(enemies, enemiesCount, 1);
                     case 0:
                         *currentMenu = MENU_GAME;
                         break;
@@ -241,6 +238,7 @@ void handleButtons(int *currentMenu, Point mouse, Player **playerPtr){
                     case 4:
                         free(*playerPtr);
                         *playerPtr = generatePlayer();
+                        respawnEnemies(enemies, enemiesCount, 1);
                     case 2:
                         *currentMenu = MENU_MAIN;
                         break;

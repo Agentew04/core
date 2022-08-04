@@ -74,11 +74,9 @@ Point vecMultiply(Point p, float scalar){
 }
 
 int checkCircleArcCollision(Arc a, Circle c){
-    // get if touching
     float dist = getDistance(a.center, c.center);
     int isInPerimeter = dist <= a.radius && dist >= a.radius-a.thickness;
 
-    // get if inside range
     float angle = getAngleBetweenPoints(c.center, a.center);
     float start = a.startAlpha;
     float end = a.startAlpha + a.deltaAlpha;

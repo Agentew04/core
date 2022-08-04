@@ -8,7 +8,6 @@
 Player* generatePlayer(){
     Player *p = (Player*)malloc(sizeof(Player));
     if(p==NULL){
-        printf("erro ao alocar player\n");
         return NULL;
     }
     p->alpha = 0;
@@ -31,38 +30,33 @@ Player* generatePlayer(){
 }
 Enemy* generateRandomEnemy(){
     Enemy* e = (Enemy*)malloc(sizeof(Enemy));
-    // get random point in border of screen
     int border = rand()%4;
     switch (border){
-    case 0: // top buffer
+    case 0: 
         e->pos.x = randomInt(0, SCR_W+BUFFER_SIZE);
         e->pos.y = randomInt(-BUFFER_SIZE,0);
         break;
-    case 1: // right buffer
+    case 1: 
         e->pos.x = randomInt(SCR_W+BUFFER_SIZE,SCR_W);
         e->pos.y = randomInt(0,SCR_H+BUFFER_SIZE);
         break;
-    case 2: // bottom buffer
+    case 2: 
         e->pos.x = randomInt(-BUFFER_SIZE,SCR_W);
         e->pos.y = randomInt(SCR_H,SCR_H+BUFFER_SIZE);
         break;
-    case 3: // left buffer
+    case 3: 
         e->pos.x = randomInt(-BUFFER_SIZE,0);
         e->pos.y = randomInt(-BUFFER_SIZE,SCR_H);
         break;
     }
-    // random speed
     e->speed = rand()%(ENMY_MAX_SPEED-ENMY_MIN_SPEED)+ENMY_MIN_SPEED;
-    // calculate random center
     int midX = rand()%((SCR_W/2+ERR_MARGIN)-(SCR_W/2-ERR_MARGIN))+(SCR_W/2-ERR_MARGIN);
     int midY = rand()%((SCR_H/2+ERR_MARGIN)-(SCR_H/2-ERR_MARGIN))+(SCR_H/2-ERR_MARGIN);
     Point mid = { midX, midY };
     e->relMid = mid;
-    // calculate alpha to center
     e->alpha = getAngleBetweenPoints(e->pos, mid);
     e->volume = rand()%(ENMY_MAX_VOLUME-ENMY_MIN_VOLUME)+ENMY_MIN_VOLUME;
     e->isAlive=1;
-    // 1 in 6 is ally
     e->isAlly = rand()%6==0;
     return e;
 }
@@ -70,7 +64,6 @@ Enemy* generateRandomEnemy(){
 Projectile* generateProjectile(Player *player, int isRocket){
     Projectile *p = (Projectile*)malloc(sizeof(Projectile));
     if(p==NULL){
-        printf("erro ao alocar projetil\n");
         return NULL;
     }
     Point mid = { SCR_W/2 , SCR_H/2 };
@@ -171,7 +164,6 @@ void showRocketLauncher(Player *player, ALLEGRO_DISPLAY* janela){
 void showArmor(Player *player){
     if(!player->armor.active)
         return;
-    // update armor radius
     float t0 = player->armor.startTime;
     float t1 = t0+player->armor.duration;
     float tx = al_get_time();
@@ -212,19 +204,13 @@ void showEnemies(Enemy **enemies, int count){
 }
 
 void addScore(int score, Player *player){
-    float nextMulti = ceilf(score/50.0f)*50.0;//((score + 49) / 50) * 50;
+    float nextMulti = ceilf(score/50.0f)*50.0;
     if(player->score < nextMulti && player->score + score >= nextMulti){
-        // get missile
-        printf("rocket available now\n");
         player->rocketAvaiable = 1;
     }
     player->score += score;
 
     if(player->score > getLevelXp(player->level)){
-        // levelup
-        printf("level up, %d -> %d\n", player->level, player->level+1);
-        printf("can pause now\n");
-        printf("can armor? %d\n", player->armor.available);
         player->level++;
         player->canPause=1;
         if(player->level%10 == 0)
@@ -235,13 +221,11 @@ void addScore(int score, Player *player){
 }
 
 int getLevelXp(int level){
-    // y = log1.5(x)+5x+5
     float log = log2(level) / log2(1.5);
     float result = log + (5*level) + 5;
     return floor(result);
 }
 float getSpeedIncrease(int level){
-    // y = tg^-1(x)+ x/32 + 0.2
     float result = atanf(level)/2 +  level/32 + 0.1;
     return result;
 }
@@ -262,7 +246,6 @@ void shoot(Player *player){
     }
     player->projectile = generateProjectile(player, player->rocketAvaiable);
     player->lastShot = now;
-    printf("shooting %s\n", player->projectile->type==ROCKET ? "rocket" : "bullet");
     if(player->rocketAvaiable)
         player->rocketAvaiable=0;
 }
@@ -282,20 +265,16 @@ void togglePause(Player *player){
 }
 
 void activateArmor(Player *player){
-    printf("trying to activate armor\n");
     if(player->armor.active || !player->armor.available){
-        printf("armor already active or not available\n");
         return;
     }
     player->armor.active = 1;
     player->armor.available = 0;
     player->armor.startTime = al_get_time();
     player->armor.duration = randomFloat(5.0f, 10.0f);
-    printf("armor time: %.2f\n", player->armor.duration);
 }
 
 void deactivateArmor(Player *player){
-    printf("deactivating armor\n");
     player->armor.active = 0;
     player->armor.startTime = 0;
     player->armor.duration = 0;

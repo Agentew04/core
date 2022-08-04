@@ -25,6 +25,6 @@ void freeEnemies(Enemy **enemies, int count);
 void updateMovement(Enemy **enemies, int nEnemies, Player *player);
 void updateCollision(Enemy **enemies, int nEnemies, Player *player);
 void updateOther(Player *player);
-void respawnEnemies(Enemy **enemies, int nEnemies);
+void respawnEnemies(Enemy **enemies, int nEnemies, int force);
 
 #endif // A_H

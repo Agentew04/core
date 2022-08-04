@@ -17,7 +17,7 @@ void showPause(ALLEGRO_FONT *font);
 void showMainMenu(ALLEGRO_FONT *font);
 void showButton(Button button, ALLEGRO_FONT *font);
 void showEnd(ALLEGRO_FONT *font, Player *player, int win);
-void handleButtons(int *currentMenu, Point mouse, Player **playerPtr);
+void handleButtons(int *currentMenu, Point mouse, Player **playerPtr, Enemy **enemies, int enemiesCount);
 void showHelp(ALLEGRO_FONT *font);
 
 #endif // HUD_H
