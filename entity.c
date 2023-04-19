@@ -132,7 +132,7 @@ void showRocketLauncher(Player *player, ALLEGRO_DISPLAY* janela){
     ALLEGRO_COLOR yellow = al_map_rgb(255, 255, 0);
     ALLEGRO_COLOR gray = al_map_rgb(128, 128, 128);
     ALLEGRO_COLOR orange = al_map_rgb(255, 165, 0);
-    int bmpSize = 32    ;
+    int bmpSize = 32;
     float unit = (float)bmpSize/4;
     al_set_new_bitmap_flags(ALLEGRO_MIPMAP);
     ALLEGRO_BITMAP *rocket = al_create_bitmap(bmpSize, bmpSize);

@@ -18,7 +18,7 @@
 
 #define ENMY_MAX_VOLUME 200
 #define ENMY_MIN_VOLUME 100
-#define ERR_MARGIN 25
+#define ERR_MARGIN 1
 #define ENMY_MAX_SPEED 4
 #define ENMY_MIN_SPEED 1
 #define BUFFER_SIZE 500
